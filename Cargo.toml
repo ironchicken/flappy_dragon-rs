@@ -1,0 +1,8 @@
+[package]
+name = "flappy_dragon"
+version = "0.1.0"
+authors = ["Richard Lewis <richard@rjlewis.me.uk>"]
+edition = "2018"
+
+[dependencies]
+sdl2 = "0.34.5"
