@@ -8,7 +8,7 @@ use sdl2::render::Canvas;
 use sdl2::video::Window;
 
 const WIDTH: u32 = 800;
-const HEIGHT: u32 = 600;
+const HEIGHT: u32 = 640;
 const FPS: u32 = 60;
 const FRAME_DELAY: u32 = 1000 / FPS;
 
