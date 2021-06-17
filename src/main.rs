@@ -44,15 +44,10 @@ fn handle_events(event: sdl2::event::Event, game_state: &mut GameState, player: 
     }
 }
 
-fn game_loop(sdl_context: sdl2::Sdl, canvas: &mut Canvas<Window>) {
-    let mut timer = sdl_context.timer().unwrap();
-    let mut events = sdl_context.event_pump().unwrap();
-
-    let mut game_state = GameState::Menu;
-    let mut player = Player { x: 0, y: WIDTH / 2 };
-
+fn game_loop(game_state: &mut GameState, player: &mut Player, canvas: &mut Canvas<Window>,
+	     timer: &mut sdl2::TimerSubsystem, events: &mut sdl2::EventPump) {
     loop {
-	if game_state == GameState::Quit {
+	if *game_state == GameState::Quit {
 	    break;
 	}
 
@@ -60,13 +55,13 @@ fn game_loop(sdl_context: sdl2::Sdl, canvas: &mut Canvas<Window>) {
 
 	match events.poll_event() {
 	    Some(event) => {
-		handle_events(event, &mut game_state, &mut player);
+		handle_events(event, game_state, player);
 	    }
 	    None => {},
 	}
 
-	update(&mut game_state, &mut player);
-	render(canvas, &mut game_state, &mut player);
+	update(game_state, player);
+	render(canvas, game_state, player);
 
 	let frame_time = timer.ticks() - frame_start;
 	if frame_time < FRAME_DELAY {
@@ -85,9 +80,14 @@ fn main() {
         .unwrap();
 
     let mut canvas = window.into_canvas().build().unwrap();
+    let mut timer = sdl_context.timer().unwrap();
+    let mut events = sdl_context.event_pump().unwrap();
+
+    let mut game_state = GameState::Menu;
+    let mut player = Player { x: 0, y: WIDTH / 2 };
 
     canvas.clear();
     canvas.present();
 
-    game_loop(sdl_context, &mut canvas);
+    game_loop(&mut game_state, &mut player, &mut canvas, &mut timer, &mut events);
 }
