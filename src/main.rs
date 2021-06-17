@@ -22,6 +22,8 @@ enum GameState {
 struct Player {
     x: i32,
     y: i32,
+    accel_x: f32,
+    accel_y: f32,
 }
 
 const PLAYER_WIDTH: u32 = 32;
@@ -30,6 +32,8 @@ const PLAYER_COLOR: Color = Color::RGB(255, 0, 0);
 
 trait Sprite {
     fn draw(&self, canvas: &mut Canvas<Window>);
+    fn change_velocity(&mut self, x: f32, y: f32);
+    fn update_position(&mut self);
 }
 
 impl Sprite for Player {
@@ -43,9 +47,22 @@ impl Sprite for Player {
         canvas.set_draw_color(PLAYER_COLOR);
         canvas.fill_rect(r).unwrap();
     }
+
+    fn change_velocity(&mut self, x: f32, y: f32) {
+        self.accel_x = x;
+        self.accel_y = y;
+        self.update_position();
+    }
+
+    fn update_position(&mut self) {
+        self.x = (self.x as f32 * self.accel_x).round() as i32;
+        self.y = (self.y as f32 * self.accel_y).round() as i32;
+    }
 }
 
-fn update(game_state: &mut GameState, player: &mut Player) {}
+fn update(game_state: &mut GameState, player: &mut Player) {
+    player.update_position();
+}
 
 fn render(canvas: &mut Canvas<Window>, game_state: &mut GameState, player: &mut Player) {
     canvas.clear();
@@ -122,6 +139,8 @@ fn main() {
     let mut player = Player {
         x: 0,
         y: HEIGHT as i32 / 2,
+        accel_x: 1.0,
+        accel_y: 1.005,
     };
 
     game_loop(
