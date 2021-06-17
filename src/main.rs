@@ -26,6 +26,8 @@ fn update(game_state: &mut GameState, player: &mut Player) {
 }
 
 fn render(canvas: &mut Canvas<Window>, game_state: &mut GameState, player: &mut Player) {
+    canvas.clear();
+    canvas.present();
 }
 
 fn handle_events(event: sdl2::event::Event, game_state: &mut GameState, player: &mut Player) {
@@ -85,9 +87,6 @@ fn main() {
 
     let mut game_state = GameState::Menu;
     let mut player = Player { x: 0, y: WIDTH / 2 };
-
-    canvas.clear();
-    canvas.present();
 
     game_loop(&mut game_state, &mut player, &mut canvas, &mut timer, &mut events);
 }
