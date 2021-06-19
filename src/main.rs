@@ -61,7 +61,12 @@ impl Sprite for Player {
 }
 
 fn update(game_state: &mut GameState, player: &mut Player) {
-    player.update_position();
+    match *game_state {
+        GameState::Playing => {
+            player.update_position();
+        }
+        _ => {}
+    }
 }
 
 fn render(canvas: &mut Canvas<Window>, game_state: &mut GameState, player: &mut Player) {
@@ -83,9 +88,35 @@ fn handle_events(event: sdl2::event::Event, game_state: &mut GameState, player: 
             } => {
                 *game_state = GameState::Quit;
             }
+            Event::KeyDown {
+                keycode: Some(Keycode::Space),
+                ..
+            } => {
+                *game_state = GameState::Playing;
+            }
             _ => {}
         },
-        GameState::Playing => {}
+        GameState::Playing => match event {
+            Event::KeyDown {
+                keycode: Some(Keycode::Escape),
+                ..
+            } => {
+                *game_state = GameState::Menu;
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::Space),
+                ..
+            } => {
+                player.change_velocity(1.0, -1.005);
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::Space),
+                ..
+            } => {
+                player.change_velocity(1.0, 1.005);
+            }
+            _ => {}
+        },
         GameState::Quit => {}
     }
 }
