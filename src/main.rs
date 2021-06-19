@@ -38,7 +38,7 @@ trait Sprite {
 
 impl Sprite for Player {
     fn draw(&self, canvas: &mut Canvas<Window>) {
-        let r = sdl2::rect::Rect::new(
+        let r = Rect::new(
             self.x + (PLAYER_WIDTH as i32 / 2),
             self.y - (PLAYER_HEIGHT as i32 / 2),
             PLAYER_WIDTH,
