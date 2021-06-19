@@ -22,8 +22,8 @@ enum GameState {
 struct Player {
     x: i32,
     y: i32,
-    accel_x: f32,
-    accel_y: f32,
+    velocity_x: f32,
+    velocity_y: f32,
 }
 
 const PLAYER_WIDTH: u32 = 32;
@@ -49,14 +49,14 @@ impl Sprite for Player {
     }
 
     fn change_velocity(&mut self, x: f32, y: f32) {
-        self.accel_x = x;
-        self.accel_y = y;
+        self.velocity_x = x;
+        self.velocity_y = y;
         self.update_position();
     }
 
     fn update_position(&mut self) {
-        self.x = (self.x as f32 * self.accel_x).round() as i32;
-        self.y = (self.y as f32 * self.accel_y).round() as i32;
+        self.x = (self.x as f32 + self.velocity_x).round() as i32;
+        self.y = (self.y as f32 + self.velocity_y).round() as i32;
     }
 }
 
@@ -107,13 +107,13 @@ fn handle_events(event: sdl2::event::Event, game_state: &mut GameState, player: 
                 keycode: Some(Keycode::Space),
                 ..
             } => {
-                player.change_velocity(1.0, -1.005);
+                player.change_velocity(0.0, -1.8);
             }
             Event::KeyUp {
                 keycode: Some(Keycode::Space),
                 ..
             } => {
-                player.change_velocity(1.0, 1.005);
+                player.change_velocity(0.0, 1.8);
             }
             _ => {}
         },
@@ -170,8 +170,8 @@ fn main() {
     let mut player = Player {
         x: 0,
         y: HEIGHT as i32 / 2,
-        accel_x: 1.0,
-        accel_y: 1.005,
+        velocity_x: 0.0,
+        velocity_y: 1.8,
     };
 
     game_loop(
