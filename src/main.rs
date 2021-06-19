@@ -1,5 +1,6 @@
 extern crate sdl2;
 
+use array2d::Array2D;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -7,10 +8,11 @@ use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
-const WIDTH: u32 = 800;
-const HEIGHT: u32 = 640;
+const WIDTH: usize = 800;
+const HEIGHT: usize = 640;
 const FPS: u32 = 60;
 const FRAME_DELAY: u32 = 1000 / FPS;
+const TILE_SIZE: usize = 32;
 
 #[derive(PartialEq)]
 enum GameState {
@@ -60,18 +62,78 @@ impl Sprite for Player {
     }
 }
 
-fn update(game_state: &mut GameState, player: &mut Player) {
+#[derive(Clone, PartialEq)]
+enum MapObject {
+    Wall,
+    Empty,
+}
+
+struct Cave {
+    map: Array2D<MapObject>,
+}
+
+trait GameMap {
+    fn new() -> Cave;
+    fn draw(&self, canvas: &mut Canvas<Window>);
+    fn scroll(&self);
+}
+
+impl GameMap for Cave {
+    fn new() -> Cave {
+        Cave {
+            map: Array2D::filled_with(MapObject::Empty, WIDTH / TILE_SIZE, HEIGHT / TILE_SIZE),
+        }
+    }
+
+    fn draw(&self, canvas: &mut Canvas<Window>) {
+        for col in 0..WIDTH {
+            for row in 0..HEIGHT {
+                match self.map.get(row, col) {
+                    None => {}
+                    Some(map_obj) => {
+                        if *map_obj == MapObject::Empty {
+                            return;
+                        }
+                        let r = Rect::new(
+                            (row * TILE_SIZE) as i32,
+                            (col * TILE_SIZE) as i32,
+                            TILE_SIZE as u32,
+                            TILE_SIZE as u32,
+                        );
+                        let c = match map_obj {
+                            MapObject::Wall => Color::RGB(60, 60, 60),
+                            _ => Color::RGB(0, 0, 0),
+                        };
+                        canvas.set_draw_color(c);
+                        canvas.fill_rect(r).unwrap();
+                    }
+                }
+            }
+        }
+    }
+
+    fn scroll(&self) {}
+}
+
+fn update(game_state: &mut GameState, player: &mut Player, cave: &mut Cave) {
     match *game_state {
         GameState::Playing => {
             player.update_position();
+            cave.scroll();
         }
         _ => {}
     }
 }
 
-fn render(canvas: &mut Canvas<Window>, game_state: &mut GameState, player: &mut Player) {
+fn render(
+    canvas: &mut Canvas<Window>,
+    game_state: &mut GameState,
+    player: &mut Player,
+    cave: &mut Cave,
+) {
     canvas.clear();
 
+    cave.draw(canvas);
     player.draw(canvas);
 
     canvas.set_draw_color(Color::RGB(0, 0, 0));
@@ -124,6 +186,7 @@ fn handle_events(event: sdl2::event::Event, game_state: &mut GameState, player: 
 fn game_loop(
     game_state: &mut GameState,
     player: &mut Player,
+    cave: &mut Cave,
     canvas: &mut Canvas<Window>,
     timer: &mut sdl2::TimerSubsystem,
     events: &mut sdl2::EventPump,
@@ -142,8 +205,8 @@ fn game_loop(
             None => {}
         }
 
-        update(game_state, player);
-        render(canvas, game_state, player);
+        update(game_state, player, cave);
+        render(canvas, game_state, player, cave);
 
         let frame_time = timer.ticks() - frame_start;
         if frame_time < FRAME_DELAY {
@@ -157,7 +220,7 @@ fn main() {
     let video = sdl_context.video().unwrap();
 
     let window = video
-        .window("Flappy Dragon", WIDTH, HEIGHT)
+        .window("Flappy Dragon", WIDTH as u32, HEIGHT as u32)
         .position_centered()
         .build()
         .unwrap();
@@ -174,9 +237,12 @@ fn main() {
         velocity_y: 1.8,
     };
 
+    let mut cave = Cave::new();
+
     game_loop(
         &mut game_state,
         &mut player,
+        &mut cave,
         &mut canvas,
         &mut timer,
         &mut events,

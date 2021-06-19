@@ -5,4 +5,5 @@ authors = ["Richard Lewis <richard@rjlewis.me.uk>"]
 edition = "2018"
 
 [dependencies]
+array2d = "0.2.1"
 sdl2 = "0.34.5"
