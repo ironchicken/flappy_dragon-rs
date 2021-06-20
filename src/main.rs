@@ -70,56 +70,85 @@ enum MapObject {
 
 struct Cave {
     map: Array2D<MapObject>,
+    last_update: u32,
 }
 
 trait GameMap {
     fn new() -> Cave;
     fn draw(&self, canvas: &mut Canvas<Window>);
-    fn scroll(&self);
+    fn scroll(&mut self, time: u32);
 }
+
+const MAP_WIDTH: usize = WIDTH / TILE_SIZE;
+const MAP_HEIGHT: usize = HEIGHT / TILE_SIZE;
 
 impl GameMap for Cave {
     fn new() -> Cave {
+        let mut map = Array2D::filled_with(MapObject::Empty, MAP_WIDTH, MAP_HEIGHT);
+
+        for col in 0..MAP_WIDTH {
+            map[(col, 0)] = MapObject::Wall;
+            map[(col, MAP_HEIGHT - 1)] = MapObject::Wall;
+        }
+
         Cave {
-            map: Array2D::filled_with(MapObject::Empty, WIDTH / TILE_SIZE, HEIGHT / TILE_SIZE),
+            map,
+            last_update: 0,
         }
     }
 
     fn draw(&self, canvas: &mut Canvas<Window>) {
-        for col in 0..WIDTH {
-            for row in 0..HEIGHT {
-                match self.map.get(row, col) {
+        for col in 0..MAP_WIDTH {
+            for row in 0..MAP_HEIGHT {
+                match self.map.get(col, row) {
                     None => {}
                     Some(map_obj) => {
-                        if *map_obj == MapObject::Empty {
-                            return;
+                        if *map_obj == MapObject::Wall {
+                            let r = Rect::new(
+                                (col * TILE_SIZE) as i32,
+                                (row * TILE_SIZE) as i32,
+                                TILE_SIZE as u32,
+                                TILE_SIZE as u32,
+                            );
+                            let c = match map_obj {
+                                MapObject::Wall => Color::RGB(60, 60, 60),
+                                _ => Color::RGB(0, 0, 0),
+                            };
+                            canvas.set_draw_color(c);
+                            canvas.fill_rect(r).unwrap();
                         }
-                        let r = Rect::new(
-                            (row * TILE_SIZE) as i32,
-                            (col * TILE_SIZE) as i32,
-                            TILE_SIZE as u32,
-                            TILE_SIZE as u32,
-                        );
-                        let c = match map_obj {
-                            MapObject::Wall => Color::RGB(60, 60, 60),
-                            _ => Color::RGB(0, 0, 0),
-                        };
-                        canvas.set_draw_color(c);
-                        canvas.fill_rect(r).unwrap();
                     }
                 }
             }
         }
     }
 
-    fn scroll(&self) {}
+    fn scroll(&mut self, time: u32) {
+        if time - self.last_update < 1000 {
+            return;
+        }
+        self.last_update = time;
+
+        for col in 1..MAP_WIDTH {
+            for row in 0..MAP_HEIGHT {
+                if let Some(mo) = self.map.get(col + 1, row) {
+                    self.map[(col, row)] = mo.clone();
+                }
+            }
+        }
+        for row in 0..MAP_HEIGHT {
+            if row == 0 || row == MAP_HEIGHT - 1 {
+                self.map[(MAP_WIDTH - 1, row)] = MapObject::Wall;
+            }
+        }
+    }
 }
 
-fn update(game_state: &mut GameState, player: &mut Player, cave: &mut Cave) {
+fn update(time: u32, game_state: &mut GameState, player: &mut Player, cave: &mut Cave) {
     match *game_state {
         GameState::Playing => {
             player.update_position();
-            cave.scroll();
+            cave.scroll(time);
         }
         _ => {}
     }
@@ -205,7 +234,7 @@ fn game_loop(
             None => {}
         }
 
-        update(game_state, player, cave);
+        update(frame_start, game_state, player, cave);
         render(canvas, game_state, player, cave);
 
         let frame_time = timer.ticks() - frame_start;
