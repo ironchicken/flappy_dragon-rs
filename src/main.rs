@@ -211,6 +211,8 @@ fn game_loop(
         let frame_time = timer.ticks() - frame_start;
         if frame_time < FRAME_DELAY {
             timer.delay(FRAME_DELAY - frame_time);
+        } else {
+            println!("Frame overrun");
         }
     }
 }
