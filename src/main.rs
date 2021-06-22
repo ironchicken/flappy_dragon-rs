@@ -136,11 +136,8 @@ impl GameMap for Cave {
                 }
             }
         }
-        for row in 0..MAP_HEIGHT {
-            if row == 0 || row == MAP_HEIGHT - 1 {
-                self.map[(MAP_WIDTH - 1, row)] = MapObject::Wall;
-            }
-        }
+        self.map[(MAP_WIDTH - 1, 0)] = MapObject::Wall;
+        self.map[(MAP_WIDTH - 1, MAP_HEIGHT - 1)] = MapObject::Wall;
     }
 }
 
