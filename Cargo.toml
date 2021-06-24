@@ -6,4 +6,5 @@ edition = "2018"
 
 [dependencies]
 array2d = "0.2.1"
+rand = "0.8.4"
 sdl2 = "0.34.5"

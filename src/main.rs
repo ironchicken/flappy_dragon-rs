@@ -1,6 +1,7 @@
 extern crate sdl2;
 
 use array2d::Array2D;
+use rand::prelude::*;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -138,6 +139,21 @@ impl GameMap for Cave {
         }
         self.map[(MAP_WIDTH - 1, 0)] = MapObject::Wall;
         self.map[(MAP_WIDTH - 1, MAP_HEIGHT - 1)] = MapObject::Wall;
+
+        let stalactite: u8 = rand::random::<u8>() % 64u8;
+        let stalagmite: u8 = rand::random::<u8>() % 64u8;
+
+        if stalactite <= 8 && stalactite > 2 {
+            for r in 1..stalactite as usize {
+                self.map[(MAP_WIDTH - 1, r)] = MapObject::Wall;
+            }
+        }
+
+        if stalagmite <= 8 && stalagmite > 2 {
+            for r in MAP_HEIGHT - stalagmite as usize..MAP_HEIGHT - 1 {
+                self.map[(MAP_WIDTH - 1, r)] = MapObject::Wall;
+            }
+        }
     }
 }
 
