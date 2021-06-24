@@ -129,7 +129,7 @@ impl GameMap for Cave {
         }
         self.last_update = time;
 
-        for col in 1..MAP_WIDTH {
+        for col in 0..MAP_WIDTH - 1 {
             for row in 0..MAP_HEIGHT {
                 if let Some(mo) = self.map.get(col + 1, row) {
                     self.map[(col, row)] = mo.clone();
