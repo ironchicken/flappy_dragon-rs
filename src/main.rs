@@ -77,7 +77,7 @@ struct Cave {
 
 trait GameMap {
     fn new() -> Cave;
-    fn draw(&self, canvas: &mut Canvas<Window>, time: u32);
+    fn draw(&self, canvas: &mut Canvas<Window>, time: u32, game_state: &GameState);
     fn scroll(&mut self, time: u32);
 }
 
@@ -101,7 +101,7 @@ impl GameMap for Cave {
         }
     }
 
-    fn draw(&self, canvas: &mut Canvas<Window>, time: u32) {
+    fn draw(&self, canvas: &mut Canvas<Window>, time: u32, game_state: &GameState) {
         let mut left_pos: usize = 0;
         let slide_factor = (time - self.last_update) as f32 / COLUMN_UPDATE_RATE as f32;
         let slide_delta = (TILE_SIZE as f32 * slide_factor).round() as usize;
@@ -112,8 +112,14 @@ impl GameMap for Cave {
                     None => {}
                     Some(map_obj) => {
                         if *map_obj == MapObject::Wall {
+                            let x = match *game_state {
+                                GameState::Playing => {
+                                    ((left_pos + 1) * TILE_SIZE - slide_delta) as i32
+                                }
+                                _ => ((left_pos + 1) * TILE_SIZE) as i32,
+                            };
                             let r = Rect::new(
-                                ((left_pos + 1) * TILE_SIZE - slide_delta) as i32,
+                                x,
                                 (row * TILE_SIZE) as i32,
                                 TILE_SIZE as u32,
                                 TILE_SIZE as u32,
@@ -198,7 +204,7 @@ fn render(
 ) {
     canvas.clear();
 
-    cave.draw(canvas, time);
+    cave.draw(canvas, time, game_state);
     player.draw(canvas);
 
     canvas.set_draw_color(Color::RGB(0, 0, 0));
