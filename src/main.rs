@@ -71,6 +71,7 @@ enum MapObject {
 
 struct Cave {
     map: Array2D<MapObject>,
+    front_column: usize,
     last_update: u32,
 }
 
@@ -85,28 +86,31 @@ const MAP_HEIGHT: usize = HEIGHT / TILE_SIZE;
 
 impl GameMap for Cave {
     fn new() -> Cave {
-        let mut map = Array2D::filled_with(MapObject::Empty, MAP_WIDTH, MAP_HEIGHT);
+        let mut map = Array2D::filled_with(MapObject::Empty, MAP_WIDTH + 1, MAP_HEIGHT);
 
-        for col in 0..MAP_WIDTH {
+        for col in 0..MAP_WIDTH + 1 {
             map[(col, 0)] = MapObject::Wall;
             map[(col, MAP_HEIGHT - 1)] = MapObject::Wall;
         }
 
         Cave {
             map,
+            front_column: 0,
             last_update: 0,
         }
     }
 
     fn draw(&self, canvas: &mut Canvas<Window>) {
-        for col in 0..MAP_WIDTH {
+        let mut left_pos: usize = 0;
+
+        let mut draw_column = |col| {
             for row in 0..MAP_HEIGHT {
                 match self.map.get(col, row) {
                     None => {}
                     Some(map_obj) => {
                         if *map_obj == MapObject::Wall {
                             let r = Rect::new(
-                                (col * TILE_SIZE) as i32,
+                                (left_pos * TILE_SIZE) as i32,
                                 (row * TILE_SIZE) as i32,
                                 TILE_SIZE as u32,
                                 TILE_SIZE as u32,
@@ -121,6 +125,16 @@ impl GameMap for Cave {
                     }
                 }
             }
+            left_pos += 1;
+        };
+
+        for col in self.front_column..MAP_WIDTH {
+            draw_column(col);
+        }
+        if self.front_column > 1 {
+            for col in 0..self.front_column - 1 {
+                draw_column(col);
+            }
         }
     }
 
@@ -130,29 +144,34 @@ impl GameMap for Cave {
         }
         self.last_update = time;
 
-        for col in 0..MAP_WIDTH - 1 {
-            for row in 0..MAP_HEIGHT {
-                if let Some(mo) = self.map.get(col + 1, row) {
-                    self.map[(col, row)] = mo.clone();
-                }
-            }
-        }
-        self.map[(MAP_WIDTH - 1, 0)] = MapObject::Wall;
-        self.map[(MAP_WIDTH - 1, MAP_HEIGHT - 1)] = MapObject::Wall;
+        let new_col: usize = if self.front_column > 1 {
+            self.front_column - 1
+        } else {
+            MAP_WIDTH
+        };
+
+        self.map[(new_col, 0)] = MapObject::Wall;
+        self.map[(new_col, MAP_HEIGHT - 1)] = MapObject::Wall;
 
         let stalactite: u8 = rand::random::<u8>() % 64u8;
         let stalagmite: u8 = rand::random::<u8>() % 64u8;
 
         if stalactite <= 8 && stalactite > 2 {
             for r in 1..stalactite as usize {
-                self.map[(MAP_WIDTH - 1, r)] = MapObject::Wall;
+                self.map[(new_col, r)] = MapObject::Wall;
             }
         }
 
         if stalagmite <= 8 && stalagmite > 2 {
             for r in MAP_HEIGHT - stalagmite as usize..MAP_HEIGHT - 1 {
-                self.map[(MAP_WIDTH - 1, r)] = MapObject::Wall;
+                self.map[(new_col, r)] = MapObject::Wall;
             }
+        }
+
+        if self.front_column >= MAP_WIDTH {
+            self.front_column = 0;
+        } else {
+            self.front_column += 1;
         }
     }
 }
