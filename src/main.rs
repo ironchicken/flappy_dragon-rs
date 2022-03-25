@@ -77,12 +77,13 @@ struct Cave {
 
 trait GameMap {
     fn new() -> Cave;
-    fn draw(&self, canvas: &mut Canvas<Window>);
+    fn draw(&self, canvas: &mut Canvas<Window>, time: u32);
     fn scroll(&mut self, time: u32);
 }
 
 const MAP_WIDTH: usize = WIDTH / TILE_SIZE;
 const MAP_HEIGHT: usize = HEIGHT / TILE_SIZE;
+const COLUMN_UPDATE_RATE: u32 = 1000;
 
 impl GameMap for Cave {
     fn new() -> Cave {
@@ -100,8 +101,10 @@ impl GameMap for Cave {
         }
     }
 
-    fn draw(&self, canvas: &mut Canvas<Window>) {
+    fn draw(&self, canvas: &mut Canvas<Window>, time: u32) {
         let mut left_pos: usize = 0;
+        let slide_factor = (time - self.last_update) as f32 / COLUMN_UPDATE_RATE as f32;
+        let slide_delta = (TILE_SIZE as f32 * slide_factor).round() as usize;
 
         let mut draw_column = |col| {
             for row in 0..MAP_HEIGHT {
@@ -110,7 +113,7 @@ impl GameMap for Cave {
                     Some(map_obj) => {
                         if *map_obj == MapObject::Wall {
                             let r = Rect::new(
-                                (left_pos * TILE_SIZE) as i32,
+                                ((left_pos + 1) * TILE_SIZE - slide_delta) as i32,
                                 (row * TILE_SIZE) as i32,
                                 TILE_SIZE as u32,
                                 TILE_SIZE as u32,
@@ -139,7 +142,7 @@ impl GameMap for Cave {
     }
 
     fn scroll(&mut self, time: u32) {
-        if time - self.last_update < 1000 {
+        if time - self.last_update < COLUMN_UPDATE_RATE {
             return;
         }
         self.last_update = time;
@@ -191,10 +194,11 @@ fn render(
     game_state: &mut GameState,
     player: &mut Player,
     cave: &mut Cave,
+    time: u32,
 ) {
     canvas.clear();
 
-    cave.draw(canvas);
+    cave.draw(canvas, time);
     player.draw(canvas);
 
     canvas.set_draw_color(Color::RGB(0, 0, 0));
@@ -267,7 +271,7 @@ fn game_loop(
         }
 
         update(frame_start, game_state, player, cave);
-        render(canvas, game_state, player, cave);
+        render(canvas, game_state, player, cave, frame_start);
 
         let frame_time = timer.ticks() - frame_start;
         if frame_time < FRAME_DELAY {
