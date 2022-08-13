@@ -37,6 +37,8 @@ trait Sprite {
     fn draw(&self, canvas: &mut Canvas<Window>);
     fn change_velocity(&mut self, x: f32, y: f32);
     fn update_position(&mut self);
+    fn map_position(&self) -> (usize, usize);
+    fn collision(&self, cave: &Cave) -> bool;
 }
 
 impl Sprite for Player {
@@ -60,6 +62,28 @@ impl Sprite for Player {
     fn update_position(&mut self) {
         self.x = (self.x as f32 + self.velocity_x).round() as i32;
         self.y = (self.y as f32 + self.velocity_y).round() as i32;
+        if self.y < 0 {
+            self.y = 0
+        }
+        if self.y > HEIGHT as i32 {
+            self.y = HEIGHT as i32
+        }
+    }
+
+    fn map_position(&self) -> (usize, usize) {
+        let col: usize = (self.x as usize + (PLAYER_WIDTH as usize / 2)) / TILE_SIZE;
+        let row: usize = (self.y as usize + (PLAYER_HEIGHT as usize / 2)) / TILE_SIZE;
+
+        return (col, row);
+    }
+
+    fn collision(&self, cave: &Cave) -> bool {
+        let (_, row) = self.map_position();
+
+        return match cave.map.get(cave.front_column, row) {
+            None => false,
+            Some(map_obj) => *map_obj == MapObject::Wall,
+        };
     }
 }
 
