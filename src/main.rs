@@ -23,14 +23,14 @@ enum GameState {
 }
 
 struct Player {
-    x: i32,
-    y: i32,
+    x: usize,
+    y: usize,
     velocity_x: f32,
     velocity_y: f32,
 }
 
-const PLAYER_WIDTH: u32 = 32;
-const PLAYER_HEIGHT: u32 = 32;
+const PLAYER_WIDTH: usize = 32;
+const PLAYER_HEIGHT: usize = 32;
 const PLAYER_COLOR: Color = Color::RGB(255, 0, 0);
 
 trait Sprite {
@@ -44,10 +44,10 @@ trait Sprite {
 impl Sprite for Player {
     fn draw(&self, canvas: &mut Canvas<Window>) {
         let r = Rect::new(
-            self.x + (PLAYER_WIDTH as i32 / 2),
-            self.y - (PLAYER_HEIGHT as i32 / 2),
-            PLAYER_WIDTH,
-            PLAYER_HEIGHT,
+            (self.x + (PLAYER_WIDTH / 2)) as i32,
+            (self.y - (PLAYER_HEIGHT / 2)) as i32,
+            PLAYER_WIDTH as u32,
+            PLAYER_HEIGHT as u32,
         );
         canvas.set_draw_color(PLAYER_COLOR);
         canvas.fill_rect(r).unwrap();
@@ -60,19 +60,19 @@ impl Sprite for Player {
     }
 
     fn update_position(&mut self) {
-        self.x = (self.x as f32 + self.velocity_x).round() as i32;
-        self.y = (self.y as f32 + self.velocity_y).round() as i32;
+        self.x = (self.x as f32 + self.velocity_x).round() as usize;
+        self.y = (self.y as f32 + self.velocity_y).round() as usize;
         if self.y < 0 {
             self.y = 0
         }
-        if self.y > HEIGHT as i32 {
-            self.y = HEIGHT as i32
+        if self.y > HEIGHT {
+            self.y = HEIGHT
         }
     }
 
     fn map_position(&self) -> (usize, usize) {
-        let col: usize = (self.x as usize + (PLAYER_WIDTH as usize / 2)) / TILE_SIZE;
-        let row: usize = (self.y as usize + (PLAYER_HEIGHT as usize / 2)) / TILE_SIZE;
+        let col: usize = (self.x + (PLAYER_WIDTH / 2)) / TILE_SIZE;
+        let row: usize = (self.y + (PLAYER_HEIGHT / 2)) / TILE_SIZE;
 
         return (col, row);
     }
@@ -128,7 +128,7 @@ impl GameMap for Cave {
     fn draw(&self, canvas: &mut Canvas<Window>, time: u32, game_state: &GameState) {
         let mut left_pos: usize = 0;
         let slide_factor = (time - self.last_update) as f32 / COLUMN_UPDATE_RATE as f32;
-        let slide_delta = (TILE_SIZE as f32 * slide_factor).round() as usize;
+        let slide_delta: usize = (TILE_SIZE as f32 * slide_factor).round() as usize;
 
         let mut draw_column = |col| {
             for row in 0..MAP_HEIGHT {
@@ -137,13 +137,11 @@ impl GameMap for Cave {
                     Some(map_obj) => {
                         if *map_obj == MapObject::Wall {
                             let x = match *game_state {
-                                GameState::Playing => {
-                                    ((left_pos + 1) * TILE_SIZE - slide_delta) as i32
-                                }
-                                _ => ((left_pos + 1) * TILE_SIZE) as i32,
+                                GameState::Playing => (left_pos + 1) * TILE_SIZE - slide_delta,
+                                _ => (left_pos + 1) * TILE_SIZE,
                             };
                             let r = Rect::new(
-                                x,
+                                x as i32,
                                 (row * TILE_SIZE) as i32,
                                 TILE_SIZE as u32,
                                 TILE_SIZE as u32,
@@ -186,17 +184,17 @@ impl GameMap for Cave {
         self.map[(new_col, 0)] = MapObject::Wall;
         self.map[(new_col, MAP_HEIGHT - 1)] = MapObject::Wall;
 
-        let stalactite: u8 = rand::random::<u8>() % 64u8;
-        let stalagmite: u8 = rand::random::<u8>() % 64u8;
+        let stalactite: usize = rand::random::<usize>() % 64usize;
+        let stalagmite: usize = rand::random::<usize>() % 64usize;
 
         if stalactite <= 8 && stalactite > 2 {
-            for r in 1..stalactite as usize {
+            for r in 1..stalactite {
                 self.map[(new_col, r)] = MapObject::Wall;
             }
         }
 
         if stalagmite <= 8 && stalagmite > 2 {
-            for r in MAP_HEIGHT - stalagmite as usize..MAP_HEIGHT - 1 {
+            for r in MAP_HEIGHT - stalagmite..MAP_HEIGHT - 1 {
                 self.map[(new_col, r)] = MapObject::Wall;
             }
         }
@@ -329,7 +327,7 @@ fn main() {
     let mut game_state = GameState::Menu;
     let mut player = Player {
         x: 0,
-        y: HEIGHT as i32 / 2,
+        y: HEIGHT / 2,
         velocity_x: 0.0,
         velocity_y: 1.8,
     };
