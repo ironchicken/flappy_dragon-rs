@@ -61,8 +61,8 @@ impl Sprite for Player {
     fn update_position(&mut self) {
         self.x = (self.x as f32 + self.velocity_x).round() as usize;
         self.y = (self.y as f32 + self.velocity_y).round() as usize;
-        if self.y < 0 {
-            self.y = 0
+        if self.y < PLAYER_HEIGHT / 2 {
+            self.y = PLAYER_HEIGHT / 2
         }
         if self.y > HEIGHT {
             self.y = HEIGHT
@@ -71,7 +71,11 @@ impl Sprite for Player {
 
     fn map_position(&self) -> (usize, usize) {
         let col: usize = (self.x + (PLAYER_WIDTH / 2)) / TILE_SIZE;
-        let row: usize = (self.y + (PLAYER_HEIGHT / 2)) / TILE_SIZE;
+        let row: usize = if self.y == PLAYER_HEIGHT / 2 {
+            0
+        } else {
+            (self.y + (PLAYER_HEIGHT / 2)) / TILE_SIZE
+        };
 
         return (col, row);
     }
