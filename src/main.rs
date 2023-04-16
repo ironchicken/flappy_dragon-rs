@@ -77,13 +77,13 @@ impl Sprite for Player {
             (self.y + (PLAYER_HEIGHT / 2)) / TILE_SIZE
         };
 
-        return (col, row);
+        return (row, col);
     }
 
     fn collision(&self, cave: &Cave) -> bool {
-        let (_, row) = self.map_position();
+        let (row, _) = self.map_position();
 
-        return match cave.map.get(cave.front_column, row) {
+        return match cave.map.get(row, cave.front_column) {
             None => false,
             Some(map_obj) => *map_obj == MapObject::Wall,
         };
@@ -114,11 +114,11 @@ const COLUMN_UPDATE_RATE: u32 = 1000;
 
 impl GameMap for Cave {
     fn new() -> Cave {
-        let mut map = Array2D::filled_with(MapObject::Empty, MAP_WIDTH + 1, MAP_HEIGHT);
+        let mut map = Array2D::filled_with(MapObject::Empty, MAP_HEIGHT, MAP_WIDTH + 1);
 
         for col in 0..MAP_WIDTH + 1 {
-            map[(col, 0)] = MapObject::Wall;
-            map[(col, MAP_HEIGHT - 1)] = MapObject::Wall;
+            map[(0, col)] = MapObject::Wall;
+            map[(MAP_HEIGHT - 1, col)] = MapObject::Wall;
         }
 
         Cave {
@@ -135,7 +135,7 @@ impl GameMap for Cave {
 
         let mut draw_column = |col| {
             for row in 0..MAP_HEIGHT {
-                match self.map.get(col, row) {
+                match self.map.get(row, col) {
                     None => {}
                     Some(map_obj) => {
                         if *map_obj == MapObject::Wall {
@@ -184,21 +184,21 @@ impl GameMap for Cave {
             MAP_WIDTH
         };
 
-        self.map[(new_col, 0)] = MapObject::Wall;
-        self.map[(new_col, MAP_HEIGHT - 1)] = MapObject::Wall;
+        self.map[(0, new_col)] = MapObject::Wall;
+        self.map[(MAP_HEIGHT - 1, new_col)] = MapObject::Wall;
 
         let stalactite: usize = rand::random::<usize>() % 64usize;
         let stalagmite: usize = rand::random::<usize>() % 64usize;
 
         if stalactite <= 8 && stalactite > 2 {
             for r in 1..stalactite {
-                self.map[(new_col, r)] = MapObject::Wall;
+                self.map[(r, new_col)] = MapObject::Wall;
             }
         }
 
         if stalagmite <= 8 && stalagmite > 2 {
             for r in MAP_HEIGHT - stalagmite..MAP_HEIGHT - 1 {
-                self.map[(new_col, r)] = MapObject::Wall;
+                self.map[(r, new_col)] = MapObject::Wall;
             }
         }
 
