@@ -110,7 +110,7 @@ trait GameMap {
 
 const MAP_WIDTH: usize = WIDTH / TILE_SIZE;
 const MAP_HEIGHT: usize = HEIGHT / TILE_SIZE;
-const COLUMN_UPDATE_RATE: u32 = 1000;
+const COLUMN_UPDATE_RATE: u32 = 500;
 
 impl GameMap for Cave {
     fn new() -> Cave {
