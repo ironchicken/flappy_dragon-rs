@@ -1,6 +1,7 @@
 extern crate sdl2;
 
 use array2d::Array2D;
+use itertools::{Itertools, MinMaxResult};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -16,8 +17,9 @@ const TILE_SIZE: usize = 32;
 
 #[derive(PartialEq)]
 enum GameState {
-    Menu,
-    Playing,
+    Menu { score: i32, lives: i32 },
+    Playing { score: i32, lives: i32 },
+    Respawning { score: i32, lives: i32 },
     Quit,
 }
 
@@ -36,8 +38,10 @@ trait Sprite {
     fn draw(&self, canvas: &mut Canvas<Window>);
     fn change_velocity(&mut self, x: f32, y: f32);
     fn update_position(&mut self);
+    fn goto_map_position(&mut self, row: usize, col: usize);
     fn map_position(&self) -> (usize, usize);
     fn collision(&self, cave: &Cave) -> bool;
+    fn avoid(&self, cave: &Cave) -> bool;
 }
 
 impl Sprite for Player {
@@ -69,6 +73,11 @@ impl Sprite for Player {
         }
     }
 
+    fn goto_map_position(&mut self, row: usize, col: usize) {
+        self.x = col * PLAYER_WIDTH;
+        self.y = row * PLAYER_HEIGHT;
+    }
+
     fn map_position(&self) -> (usize, usize) {
         let col: usize = (self.x + (PLAYER_WIDTH / 2)) / TILE_SIZE;
         let row: usize = if self.y == PLAYER_HEIGHT / 2 {
@@ -88,6 +97,20 @@ impl Sprite for Player {
             Some(map_obj) => *map_obj == MapObject::Wall,
         };
     }
+
+    fn avoid(&self, cave: &Cave) -> bool {
+        if self.collision(cave) {
+            return false;
+        }
+
+        let wall_count = cave
+            .map
+            .column_iter(cave.front_column)
+            .filter(|mo| **mo == MapObject::Wall)
+            .count();
+
+        return wall_count > 2;
+    }
 }
 
 #[derive(Clone, PartialEq)]
@@ -105,7 +128,8 @@ struct Cave {
 trait GameMap {
     fn new() -> Cave;
     fn draw(&self, canvas: &mut Canvas<Window>, time: u32, game_state: &GameState);
-    fn scroll(&mut self, time: u32);
+    fn scroll(&mut self, time: u32) -> bool;
+    fn mid_point(&self, col: usize) -> usize;
 }
 
 const MAP_WIDTH: usize = WIDTH / TILE_SIZE;
@@ -140,7 +164,9 @@ impl GameMap for Cave {
                     Some(map_obj) => {
                         if *map_obj == MapObject::Wall {
                             let x = match *game_state {
-                                GameState::Playing => (left_pos + 1) * TILE_SIZE - slide_delta,
+                                GameState::Playing { score: _, lives: _ } => {
+                                    (left_pos + 1) * TILE_SIZE - slide_delta
+                                }
                                 _ => (left_pos + 1) * TILE_SIZE,
                             };
                             let r = Rect::new(
@@ -172,9 +198,9 @@ impl GameMap for Cave {
         }
     }
 
-    fn scroll(&mut self, time: u32) {
+    fn scroll(&mut self, time: u32) -> bool {
         if time - self.last_update < COLUMN_UPDATE_RATE {
-            return;
+            return false;
         }
         self.last_update = time;
 
@@ -207,14 +233,48 @@ impl GameMap for Cave {
         } else {
             self.front_column += 1;
         }
+
+        return true;
+    }
+
+    fn mid_point(&self, col: usize) -> usize {
+        return match self
+            .map
+            .column_iter(col)
+            .enumerate()
+            .filter_map(|(idx, mo)| {
+                if *mo == MapObject::Empty {
+                    Some(idx)
+                } else {
+                    None
+                }
+            })
+            .minmax()
+        {
+            MinMaxResult::NoElements => MAP_HEIGHT / 2,
+            MinMaxResult::OneElement(row) => row,
+            MinMaxResult::MinMax(min, max) => 1 + (max - min) / 2,
+        };
     }
 }
 
 fn update(time: u32, game_state: &mut GameState, player: &mut Player, cave: &mut Cave) {
     match *game_state {
-        GameState::Playing => {
+        GameState::Playing { score, lives } => {
             player.update_position();
-            cave.scroll(time);
+            let new_col = cave.scroll(time);
+            if player.collision(cave) {
+                player.goto_map_position(MAP_HEIGHT / 2, 1);
+                *game_state = GameState::Respawning {
+                    score,
+                    lives: lives - 1,
+                };
+            } else if player.avoid(cave) && new_col {
+                *game_state = GameState::Playing {
+                    score: score + 10,
+                    lives,
+                };
+            }
         }
         _ => {}
     }
@@ -238,7 +298,7 @@ fn render(
 
 fn handle_events(event: sdl2::event::Event, game_state: &mut GameState, player: &mut Player) {
     match game_state {
-        GameState::Menu => match event {
+        GameState::Menu { score, lives } => match event {
             Event::Quit { .. }
             | Event::KeyDown {
                 keycode: Some(Keycode::Escape),
@@ -250,16 +310,22 @@ fn handle_events(event: sdl2::event::Event, game_state: &mut GameState, player: 
                 keycode: Some(Keycode::Space),
                 ..
             } => {
-                *game_state = GameState::Playing;
+                *game_state = GameState::Playing {
+                    score: *score,
+                    lives: *lives,
+                };
             }
             _ => {}
         },
-        GameState::Playing => match event {
+        GameState::Playing { score, lives } => match event {
             Event::KeyDown {
                 keycode: Some(Keycode::Escape),
                 ..
             } => {
-                *game_state = GameState::Menu;
+                *game_state = GameState::Menu {
+                    score: *score,
+                    lives: *lives,
+                };
             }
             Event::KeyDown {
                 keycode: Some(Keycode::Space),
@@ -272,6 +338,25 @@ fn handle_events(event: sdl2::event::Event, game_state: &mut GameState, player: 
                 ..
             } => {
                 player.change_velocity(0.0, 1.8);
+            }
+            _ => {}
+        },
+        GameState::Respawning { score, lives } => match event {
+            Event::Quit { .. }
+            | Event::KeyDown {
+                keycode: Some(Keycode::Escape),
+                ..
+            } => {
+                *game_state = GameState::Quit;
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::Space),
+                ..
+            } => {
+                *game_state = GameState::Playing {
+                    score: *score,
+                    lives: *lives,
+                };
             }
             _ => {}
         },
@@ -327,7 +412,7 @@ fn main() {
     let mut timer = sdl_context.timer().unwrap();
     let mut events = sdl_context.event_pump().unwrap();
 
-    let mut game_state = GameState::Menu;
+    let mut game_state = GameState::Menu { score: 0, lives: 3 };
     let mut player = Player {
         x: 0,
         y: HEIGHT / 2,
